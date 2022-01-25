@@ -142,7 +142,7 @@ class BHyveZoneHistorySensor(BHyveDeviceEntity):
         self._zone = zone
         self._zone_id = zone.get("station")
 
-        name = "{0} zone history".format(zone.get("name", "Unknown"))
+        name = "{0} history".format(zone.get("name", "Unknown"))
         _LOGGER.info("Creating history sensor: %s", name)
 
         super().__init__(
