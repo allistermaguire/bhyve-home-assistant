@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import pprint
+import hashlib
 
 import voluptuous as vol
 
@@ -133,7 +134,13 @@ async def async_setup(hass, config):
 
         if event == EVENT_PROGRAM_CHANGED:
             device_id = data.get("program", {}).get("device_id")
-            program_id = data.get("program", {}).get("id")
+            # Smart program id can change depending on the zones that are included, creating a constant id as there can
+            # only be a single Smart program per device.
+            is_smart_program = bool(data.get("program", {}).get("is_smart_program", False))
+            if is_smart_program:
+                program_id = hashlib.md5("{}:smart_program".format(device_id)).hexdigest()
+            else:
+                program_id = data.get("program", {}).get("id")
         else:
             device_id = data.get("device_id")
 

@@ -1,6 +1,7 @@
 """Support for Orbit BHyve switch (toggle zone)."""
 import datetime
 import logging
+import hashlib
 
 from datetime import timedelta
 import voluptuous as vol
@@ -145,7 +146,6 @@ async def async_setup_platform(hass, config, async_add_entities, _discovery_info
         program_device = device_by_id.get(program.get("device_id"))
         program_id = program.get("program")
         if program_id is not None:
-            _LOGGER.info("Creating switch: Program %s", program.get("name"))
             switches.append(
                 BHyveProgramSwitch(
                     hass, bhyve, program, program_device, "bulletin-board"
@@ -197,6 +197,7 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
         program_name = program.get("name")
 
         name = f"{device_name} {program_name} program"
+        _LOGGER.info("Creating switch: %s", name)
 
         super().__init__(hass, bhyve, name, icon, DEVICE_CLASS_SWITCH)
 
@@ -212,7 +213,7 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
 
         attrs = {
             "device_id": self._device_id,
-            "is_smart_program": self._program.get("is_smart_program", False),
+            "is_smart_program": self._is_smart_program,
             "frequency": self._program.get("frequency"),
             "start_times": self._program.get("start_times"),
             "budget": self._program.get("budget"),
@@ -264,9 +265,16 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
             if event == EVENT_PROGRAM_CHANGED:
                 self._ws_unprocessed_events.append(data)
                 self.async_schedule_update_ha_state(True)
+        
+        # Smart program id can change depending on the zones that are included, creating a constant id as there can
+        # only be a single Smart program per device.
+        if self._is_smart_program:
+            program_id = hashlib.md5("{}:smart_program".format(self._device_id)).hexdigest()
+        else:
+            program_id = self._program_id
 
         self._async_unsub_dispatcher_connect = async_dispatcher_connect(
-            self.hass, SIGNAL_UPDATE_PROGRAM.format(self._program_id), update
+            self.hass, SIGNAL_UPDATE_PROGRAM.format(program_id), update
         )
 
     async def async_will_remove_from_hass(self):
@@ -288,6 +296,8 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
             program = data.get("program")
             if program is not None:
                 self._program = program
+                # Update Smart Watering program_id to match new id so that turn on of off later.
+                self._program_id = program.get("id")
 
     def _should_handle_event(self, event_name, data):
         return event_name in [EVENT_PROGRAM_CHANGED]
