@@ -1,7 +1,6 @@
 """Support for Orbit BHyve switch (toggle zone)."""
 import datetime
 import logging
-import hashlib
 
 from datetime import timedelta
 import voluptuous as vol
@@ -35,7 +34,7 @@ from .const import (
     SIGNAL_UPDATE_PROGRAM,
 )
 from .pybhyve.errors import BHyveError
-from .util import orbit_time_to_local_time
+from .util import orbit_time_to_local_time, generate_program_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -266,12 +265,8 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
                 self._ws_unprocessed_events.append(data)
                 self.async_schedule_update_ha_state(True)
         
-        # Smart program id can change depending on the zones that are included, creating a constant id as there can
-        # only be a single Smart program per device.
-        if self._is_smart_program:
-            program_id = hashlib.md5("{}:smart_program".format(self._device_id).encode('utf-8')).hexdigest()
-        else:
-            program_id = self._program_id
+        # Use a constant id so that it is updated on change.
+        program_id = generate_program_id(self._device_id, self._program_id, self._is_smart_program)
 
         self._async_unsub_dispatcher_connect = async_dispatcher_connect(
             self.hass, SIGNAL_UPDATE_PROGRAM.format(program_id), update
@@ -296,7 +291,7 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
             program = data.get("program")
             if program is not None:
                 self._program = program
-                # Update Smart Watering program_id to match new id so that turn on of off later.
+                # Update Smart Watering program_id to match current id.
                 self._program_id = program.get("id")
 
     def _should_handle_event(self, event_name, data):
