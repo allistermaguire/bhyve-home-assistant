@@ -204,6 +204,7 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
         self._device_id = program.get("device_id")
         self._program_id = program.get("id")
         self._available = True
+        self._is_smart_program = bool(self._program.get("is_smart_program", False))
 
     @property
     def extra_state_attributes(self):
@@ -228,7 +229,8 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
 
     @property
     def unique_id(self):
-        return "bhyve:program:{}".format(self._program_id)
+        """Return a unique, unchanging string that represents this program."""
+        return f"bhyve:{self._device_id}:program:{'smart_program' if self._is_smart_program else self._program_id}"
 
     @property
     def entity_category(self):
