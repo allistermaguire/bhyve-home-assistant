@@ -138,7 +138,7 @@ async def async_setup(hass, config):
             # only be a single Smart program per device.
             is_smart_program = bool(data.get("program", {}).get("is_smart_program", False))
             if is_smart_program:
-                program_id = hashlib.md5("{}:smart_program".format(device_id)).hexdigest()
+                program_id = hashlib.md5("{}:smart_program".format(device_id).encode('utf-8')).hexdigest()
             else:
                 program_id = data.get("program", {}).get("id")
         else:

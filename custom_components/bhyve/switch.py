@@ -269,7 +269,7 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
         # Smart program id can change depending on the zones that are included, creating a constant id as there can
         # only be a single Smart program per device.
         if self._is_smart_program:
-            program_id = hashlib.md5("{}:smart_program".format(self._device_id)).hexdigest()
+            program_id = hashlib.md5("{}:smart_program".format(self._device_id).encode('utf-8')).hexdigest()
         else:
             program_id = self._program_id
 
