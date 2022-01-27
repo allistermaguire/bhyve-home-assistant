@@ -35,7 +35,7 @@ from .const import (
     SIGNAL_UPDATE_DEVICE,
     SIGNAL_UPDATE_PROGRAM,
 )
-from .util import anonymize, generate_program_id
+from .util import anonymize, constant_program_id
 from .pybhyve import Client
 from .pybhyve.errors import BHyveError, WebsocketError
 
@@ -136,7 +136,7 @@ async def async_setup(hass, config):
             program_id = data.get("program", {}).get("id")
             # Use a constant id if Smart program.
             is_smart_program = bool(data.get("program", {}).get("is_smart_program", False))
-            program_id = generate_program_id(device_id,program_id,is_smart_program)
+            program_id = constant_program_id(device_id,program_id,is_smart_program)
         else:
             device_id = data.get("device_id")
 

@@ -34,7 +34,7 @@ from .const import (
     SIGNAL_UPDATE_PROGRAM,
 )
 from .pybhyve.errors import BHyveError
-from .util import orbit_time_to_local_time, generate_program_id
+from .util import orbit_time_to_local_time, constant_program_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -266,7 +266,7 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
                 self.async_schedule_update_ha_state(True)
         
         # Use a constant id so that it is updated on change.
-        program_id = generate_program_id(self._device_id, self._program_id, self._is_smart_program)
+        program_id = constant_program_id(self._device_id, self._program_id, self._is_smart_program)
 
         self._async_unsub_dispatcher_connect = async_dispatcher_connect(
             self.hass, SIGNAL_UPDATE_PROGRAM.format(program_id), update
@@ -291,7 +291,7 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
             program = data.get("program")
             if program is not None:
                 self._program = program
-                # Update Smart Watering program_id to match current id.
+                # Update Smart Watering program_id to match id if changed on irrigation system.
                 self._program_id = program.get("id")
 
     def _should_handle_event(self, event_name, data):
