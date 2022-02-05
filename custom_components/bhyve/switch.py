@@ -34,7 +34,7 @@ from .const import (
     SIGNAL_UPDATE_PROGRAM,
 )
 from .pybhyve.errors import BHyveError
-from .util import orbit_time_to_local_time, constant_program_id
+from .util import orbit_time_to_local_time, pesudo_id_if_smart_program
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -254,10 +254,10 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
     @property
     def unique_id(self):
         """Return a unique id for the entity. Changing this results in a backwards incompatible change."""
-        return (
-            f"bhyve:{self._device_id}:"
-            f"program:{'smart_program' if self._is_smart_program else self._program_id}"
-        )
+        uid = f"bhyve:program:{self._program_id}"
+        if self._is_smart_program:
+            uid = f"bhyve:smart_program:device:{self._device_id}"
+        return uid
 
     @property
     def entity_category(self):
@@ -290,8 +290,7 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
                 self._ws_unprocessed_events.append(data)
                 self.async_schedule_update_ha_state(True)
 
-        # Use a constant id so that it is updated on change.
-        program_id = constant_program_id(
+        program_id = pesudo_id_if_smart_program(
             self._device_id, self._program_id, self._is_smart_program
         )
 
@@ -318,7 +317,7 @@ class BHyveProgramSwitch(BHyveWebsocketEntity, SwitchEntity):
             program = data.get("program")
             if program is not None:
                 self._program = program
-                # Update Smart Watering program_id to match id on irrigation system.
+                # Update program_id in case event has new id. Only occurs for Smart Watering program.
                 self._program_id = program.get("id")
 
     def _should_handle_event(self, event_name, data):

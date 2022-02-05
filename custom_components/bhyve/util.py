@@ -15,10 +15,16 @@ def anonymize(device):
     return device
 
 
-def constant_program_id(
+def pesudo_id_if_smart_program(
     device_id, program_id, is_smart_program: bool = False
 ):
-    """For devices with multiple zones, Smart program id changes depending on the zone/s that are included. Generate a constant id so that it is updated on change."""
+    """
+    Compute a pesudo ID to ensure the Smart program has a constant ID for events.
+
+    Devices with multiple zones can change the `program_id` used by the Smart
+    Watering program based on which zones are included in the program.
+    return: pesudo `program_id` for Smart program, otherwise real `program_id`.
+    """
     if is_smart_program:
         program_id = hashlib.md5(
             f"{device_id}:smart_program".encode('utf-8')
