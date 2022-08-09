@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for BHyve."""
 
-    VERSION = 2
+    VERSION = 1
 
     def __init__(self):
         """Initialize the config flow."""
