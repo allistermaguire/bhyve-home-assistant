@@ -30,7 +30,7 @@ _Note_: The Wifi hub is required to provide the flood sensors with internet conn
 
 ## Supported Entities
 
-- `sensor` for measuring battery levels and watering history of `sprinkler_timer` devices as well as the device on/off state (not to be confused with zone on/off switches).
+- `sensor` for measuring battery levels, soil moisture levels and watering history of `sprinkler_timer` devices as well as the device on/off state (not to be confused with zone on/off switches).
 - `temperature sensor` for measuring the temperature at the device and alarm attribute for above/below threshold.
 - `switch` for turning a zone on/off, enabling/disabling rain delays and toggling pre-configured programs.
 - `binary_sensor` for detecting water leaks or flooding.
@@ -74,6 +74,10 @@ A **battery** `sensor` entity is created for any device which has a battery leve
 ### Device State sensor
 
 A **device state** `sensor` entity is created for each device. This reports the state of the device, for example `auto` or `off`. A device may be switched to `off` either manually through the B-hyve app, or may be automatically set when battery levels are too low to operate the device correctly.
+
+### Zone Soil Moisture sensor
+
+A **zone Soil Moisture** `sensor` entity is created for each zone if a Smart Watering program is enabled. This reports the Soil Moisture level of the zone.
 
 ### Zone Watering History sensor
 
