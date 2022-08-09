@@ -336,7 +336,7 @@ class BHyveZoneSwitch(BHyveDeviceEntity, SwitchEntity):
 
         self._initial_programs = device_programs
 
-        name = f"{self._zone_name} zone"
+        name = f"{self._zone_name}"
         _LOGGER.info("Creating switch: %s", name)
 
         super().__init__(hass, bhyve, device, name, icon, DEVICE_CLASS_SWITCH)
