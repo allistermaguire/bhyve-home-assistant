@@ -2,16 +2,13 @@
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    ATTR_BATTERY_LEVEL,
-    TEMP_FAHRENHEIT
-)
+from homeassistant.const import ATTR_BATTERY_LEVEL, PERCENTAGE, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.icon import icon_for_battery_level
 
-from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 
 from . import BHyveDeviceEntity
 from .const import (
@@ -54,6 +51,8 @@ async def async_setup_entry(
             sensors.append(BHyveStateSensor(hass, bhyve, device))
             for zone in device.get("zones"):
                 sensors.append(BHyveZoneHistorySensor(hass, bhyve, device, zone))
+                if zone.get("smart_watering_enabled"):
+                    sensors.append(BHyveZoneMoistureSensor(hass, bhyve, device, zone))
 
             if device.get("battery", None) is not None:
                 sensors.append(BHyveBatterySensor(hass, bhyve, device))
@@ -227,6 +226,103 @@ class BHyveZoneHistorySensor(BHyveDeviceEntity):
 
         except BHyveError as err:
             _LOGGER.warning("Unable to retreive data for %s: %s", self._name, err)
+
+
+class BHyveZoneMoistureSensor(BHyveDeviceEntity):
+    """Define a BHyve sensor."""
+
+    def __init__(self, hass, bhyve, device, zone):
+        """Initialize the sensor."""
+        self._zone = zone
+        self._zone_id = zone.get("station")
+        self._smart_watering_enabled = zone.get("smart_watering_enabled")
+
+        name = "{} zone Soil Moisture".format(zone.get("name", "Unknown"))
+        _LOGGER.info("Creating soil moisture sensor: %s", name)
+
+        super().__init__(
+            hass,
+            bhyve,
+            device,
+            name,
+            "moisture",
+            SensorDeviceClass.HUMIDITY,
+        )
+
+    def _setup(self, device):
+        self._state = None
+        self._attrs = {
+            "state_class": SensorStateClass.MEASUREMENT,
+            "unit_of_measurement": PERCENTAGE,
+        }
+        self._available = device.get("is_connected", False)
+
+    @property
+    def state(self):
+        """Return the state of this sensor."""
+        return self._state
+
+    @property
+    def state_class(self):
+        """Return the state class of this sensor."""
+        return self._attrs["state_class"]
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement for the sensor."""
+        return self._attrs["unit_of_measurement"]
+
+    @property
+    def should_poll(self):
+        """Enable polling."""
+        return True
+
+    @property
+    def unique_id(self):
+        """Return a unique, unchanging string that represents this sensor."""
+        return f"{self._mac_address}:{self._device_id}:{self._zone_id}:soil_moisture"
+
+    @property
+    def entity_category(self):
+        """History is a diagnostic category."""
+        return EntityCategory.DIAGNOSTIC
+
+    def _should_handle_event(self, event_name, data):
+        return event_name in [EVENT_DEVICE_IDLE]
+
+    async def async_update(self):
+        """Retrieve latest state."""
+        force_update = bool(list(self._ws_unprocessed_events))
+        self._ws_unprocessed_events[:] = []  # We don't care about these
+
+        if self._smart_watering_enabled:
+            landscape = None
+            try:
+                landscape = await self._bhyve.get_landscape(
+                    self._device_id, self._zone_id, force_update
+                )
+
+            except BHyveError as err:
+                _LOGGER.warning(
+                    "Unable to retreive current soil data for %s: %s", self.name, err
+                )
+
+            if landscape is not None:
+                _LOGGER.debug("Landscape data %s", landscape)
+
+                self._state = round(
+                    landscape["readily_available_water"]
+                    / (
+                        landscape["field_capacity_depth"]
+                        - landscape["replenishment_point"]
+                    )
+                    * 100
+                )
+        else:
+            _LOGGER.info(
+                "Zone %s isn't smart watering enabled, cannot update soil moisture sensor.",
+                self._zone_name,
+            )
 
 
 class BHyveStateSensor(BHyveDeviceEntity):
