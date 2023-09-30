@@ -1,6 +1,7 @@
 """Config flow for BHyve integration."""
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -90,9 +91,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         device_options = {
-            str(d["id"]): f'{d["name"]}'
+            str(d.get("id")): f'{d.get("name", "Unnamed device")}'
             for d in self.devices
-            if d["type"] != DEVICE_BRIDGE
+            if d.get("type") != DEVICE_BRIDGE
         }
         return self.async_show_form(
             step_id="device",
@@ -164,8 +165,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             devices = [str(d["id"]) for d in self.devices if d["type"] != DEVICE_BRIDGE]
 
             return await self.async_step_device(user_input={CONF_DEVICES: devices})
-        else:
-            return self.async_abort(reason="cannot_connect")
+
+        return self.async_abort(reason="cannot_connect")
 
     @staticmethod
     @callback
@@ -204,15 +205,17 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         except BHyveError:
             return self.async_abort(reason="cannot_connect")
 
-        # _LOGGER.debug("Devices: %s", json.dumps(devices))
-        # _LOGGER.debug("Programs: %s", json.dumps(programs))
+        _LOGGER.debug("Devices: %s", json.dumps(devices))
 
         # _LOGGER.debug("ALL DEVICES")
         # _LOGGER.debug(str(self.config_entry.options))
 
         device_options = {
-            str(d["id"]): f'{d["name"]}' for d in devices if d["type"] != DEVICE_BRIDGE
+            str(d.get("id")): f'{d.get("name", "Unnamed device")}'
+            for d in devices
+            if d.get("type") != DEVICE_BRIDGE
         }
+
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
